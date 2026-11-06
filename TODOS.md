@@ -1,113 +1,391 @@
 # Technical TODOs
 
-This document is the implementation roadmap for growing Mini Apps for Linux into a polished collection of small desktop tools. It distinguishes the current application from proposed work: checklist items below are not claims that a feature is already implemented.
+This document is the execution plan for growing Mini Apps for Linux into a richer collection of polished desktop mini-apps while keeping the current application honest: real features remain real, and mockups remain simulated.
 
-## Product direction
+This repo already contains a working Rust desktop app with four real tools:
 
-- [ ] Keep Mini Apps as one native Linux application with a searchable launcher and integrated tool panels.
-- [ ] Build new concepts as **mockups first**: interactive UI, seeded sample data, and state held in memory only.
-- [ ] Make mockup boundaries visible in the UI and documentation. Do not imply that simulated system metrics, networks, devices, files, or repositories are live data.
-- [ ] Do not add system-changing actions to mockups. No network configuration, audio-device changes, power controls, package installation, filesystem scanning, Git access, or log-file access.
-- [ ] Preserve the existing four tools and their documented behaviors while adding mockups.
-- [ ] Prefer small, discoverable tools with a clear primary interaction over broad settings dashboards.
+- Desktop Shortcut Maker
+- Clipboard Inspector
+- Screenshot Tool
+- Color Picker
 
-## Phase 1 — Establish a maintainable foundation
+The roadmap below is intentionally broader: it covers how to turn the app from a small launcher into a curated mini-apps suite without blurring the line between real capabilities and UI-only concepts.
 
-- [ ] Split `src/main.rs` into modules while keeping the current application behavior:
-  - [ ] `app` — launcher, navigation, and shared app state.
-  - [ ] `theme` — palette and egui theme setup.
-  - [ ] `tools` — tool catalog and tool IDs.
-  - [ ] `tools/shortcut_maker.rs` — existing Desktop Shortcut Maker.
-  - [ ] `tools/clipboard.rs` — existing Clipboard Inspector.
-  - [ ] `tools/screenshot.rs` — existing Screenshot Tool and portal capture support.
-  - [ ] `tools/color_picker.rs` — existing Color Picker and sampling canvas.
-  - [ ] `ui` — shared cards, form controls, status pills, and headers.
-- [ ] Keep app-specific state local to each tool; avoid adding unrelated tool state to one global struct.
-- [ ] Define a consistent convention for tool metadata: stable ID, display name, summary, search keywords, and mockup/functional status.
-- [ ] Add reusable UI patterns for empty states, sample-data labels, status feedback, and responsive layouts.
-- [ ] Preserve existing unit tests during the module split and run `cargo test --locked` before and after the refactor.
-- [ ] Check formatting with `cargo fmt --check` and address compiler warnings introduced by the refactor.
+## 1. Product goals
 
-## Phase 2 — Add the first mockup batch
+- [ ] Keep Mini Apps as a single native Linux desktop app with a unified launcher and shared visual language.
+- [ ] Make the app feel like a collection of small utilities, not a fragmented toolkit with unrelated screens.
+- [ ] Add future mini-apps intentionally as mockups first, with clear labeling and sample data.
+- [ ] Preserve current functionality and avoid regressions in the four existing tools.
+- [ ] Make the app feel lightweight, dense with useful information, and unmistakably Linux-first.
+- [ ] Keep every new concept small and focused: one primary interaction, one primary data model, one primary screen.
 
-Implement each item as a self-contained tool panel using local state and deterministic sample data. Buttons and controls should visibly respond, but must not perform external system actions.
+## 2. Non-goals and guardrails
 
-### Quick Notes
+This is where we protect the product from becoming misleading or invasive.
 
-- [ ] Add a list/detail layout with seeded example notes, title, body, and tags.
-- [ ] Implement local search, tag filtering, pin/unpin, and note selection.
-- [ ] Provide a preview mode for a small, documented subset of Markdown-like formatting.
-- [ ] Keep edits in memory only; label the notes as a demo and do not write user files.
-- [ ] Add tests for search/filter behavior and any pure formatting helpers.
+- [ ] No real system mutation in mockup screens.
+- [ ] No reading real logs, processes, network config, audio devices, or package metadata in mockups.
+- [ ] No writing user files or persisting real data in mockup tools without explicit future design review.
+- [ ] No claiming a simulated value is live system state.
+- [ ] No hidden background tasks for mockups that silently access privileged resources.
+- [ ] If a tool needs system integration later, it must be introduced as a real feature with explicit consent and documented permissions.
 
-### System Monitor
+## 3. Design system and UI standards
 
-- [ ] Create dashboard cards for CPU, memory, disk, and network using clearly labeled sample values.
-- [ ] Add charts driven by deterministic or bounded mock data; label them as simulated.
-- [ ] Include a table of fictional processes and basic sorting/filtering interactions.
-- [ ] Do not read `/proc`, query real services, or imply that values describe the host machine.
-- [ ] Test sample-data bounds and sorting/filtering logic.
+Before adding more mini-apps, define the shared visual and interaction language.
 
-### Audio Mixer
+- [ ] Define a visual token set:
+  - [ ] app background color, panel color, card color, border color
+  - [ ] accent colors for primary actions and selected states
+  - [ ] success, warning, and error states
+  - [ ] text colors for heading, body, muted, and code-like labels
+- [ ] Define reusable UI primitives:
+  - [ ] header block
+  - [ ] card frame
+  - [ ] status pill
+  - [ ] segmented control
+  - [ ] filter/search field
+  - [ ] inline action row
+  - [ ] empty state component
+- [ ] Establish a standard for mockup labeling:
+  - [ ] each mockup should say “demo”, “sample data”, or “simulated” in the UI where relevant
+  - [ ] mockup-only screens should avoid using real-sounding labels like “connected”, “active”, “real disk usage”, or “live processes”
+- [ ] Define layout rules:
+  - [ ] narrow windows should stack vertically
+  - [ ] wide windows should use 2-column or 3-column layouts when the content benefits from it
+  - [ ] long lists should live inside scroll areas with clear visual affordances
+- [ ] Keep all icons and labels consistent with the existing Catppuccin-inspired dark theme.
 
-- [ ] Add a mock output-device selector and fictional per-app volume rows.
-- [ ] Implement local slider, mute, and master-volume interactions.
-- [ ] Add a visual level meter using simulated values and mark it as a demo.
-- [ ] Do not connect to PipeWire, PulseAudio, ALSA, or modify actual audio settings.
-- [ ] Test volume clamping and mute/unmute state transitions.
+## 4. Architecture and repo structure plan
 
-### Pomodoro Timer
+The current codebase is a single-file app (`src/main.rs`). More features will become difficult to maintain unless we split responsibilities.
 
-- [ ] Add focus, short-break, and long-break modes with configurable display presets.
-- [ ] Implement start, pause, reset, and mode selection with a visible countdown.
-- [ ] Keep completed-session history in memory and provide a seeded example or clear empty state.
-- [ ] Avoid background notifications or persistent tracking in the initial mockup.
-- [ ] Test timer state transitions and duration calculations without relying on wall-clock sleeps.
+### Planned module layout
 
-## Phase 3 — Grow the collection
+- [ ] `src/main.rs`
+  - [ ] keep only bootstrapping and app setup
+  - [ ] optionally remove most feature logic from the top-level file
+- [ ] `src/app.rs`
+  - [ ] root app state and app lifecycle
+  - [ ] launcher state and tool selection
+- [ ] `src/theme.rs`
+  - [ ] dark theme palette
+  - [ ] widget styling
+  - [ ] common colors and spacing constants
+- [ ] `src/tools/mod.rs`
+  - [ ] tool catalog definitions
+  - [ ] tool IDs and metadata
+- [ ] `src/tools/shortcut_maker.rs`
+  - [ ] current real feature logic
+- [ ] `src/tools/clipboard.rs`
+  - [ ] current real feature logic
+- [ ] `src/tools/screenshot.rs`
+  - [ ] current real feature logic
+- [ ] `src/tools/color_picker.rs`
+  - [ ] current real feature logic
+- [ ] `src/tools/mockups/`
+  - [ ] `notes.rs`
+  - [ ] `system_monitor.rs`
+  - [ ] `audio_mixer.rs`
+  - [ ] `focus_timer.rs`
+  - [ ] `unit_converter.rs`
+  - [ ] `downloads.rs`
+  - [ ] `palette_studio.rs`
+  - [ ] other future mockup modules
+- [ ] `src/ui.rs`
+  - [ ] shared frame, header, button, list, card components
+- [ ] `src/data.rs`
+  - [ ] sample data stores for mockup screens
 
-- [ ] Add a **Unit Converter** with category tabs, input swapping, favorites, and recent conversions; cover conversion formulas with tests.
-- [ ] Add **Color Palette Studio** for sample palettes, swatches, and contrast comparisons; keep it distinct from the existing screen Color Picker.
-- [ ] Add a **Downloads Organizer** using fictional files, type groups, filters, and a mock preview; do not enumerate the user's Downloads directory.
-- [ ] Add a **Git Dashboard** with fictional repositories and commit histories; do not invoke Git or access repository credentials.
-- [ ] Add a **Log Viewer** over bundled/sample log lines with severity filters; do not read host logs.
-- [ ] Add further concepts from README only when they have a distinct user need, a mock-data plan, and a small set of testable interactions.
+### Refactor steps
 
-## Launcher and interaction quality
+- [ ] Create module skeleton without changing behavior.
+- [ ] Move tool-specific state and UI code behind tool modules.
+- [ ] Keep public app behavior identical during the extraction.
+- [ ] Add a stable tool metadata format for both real and mockup apps.
+- [ ] Ensure each tool module owns its state and UI rendering.
+- [ ] Avoid making global state a dumping ground for unrelated tool data.
 
-- [ ] Add a visible distinction between functional tools and mockups in the launcher and tool screens.
-- [ ] Ensure search matches tool names, descriptions, and keywords, including newly added tools.
-- [ ] Verify keyboard navigation, Enter-to-open, Escape/back behavior, and focus restoration.
-- [ ] Check the tool grid and each panel at the minimum window size and at wider sizes.
-- [ ] Ensure long text, empty results, and sample-data tables remain usable in scroll areas.
-- [ ] Provide consistent status feedback and avoid silent no-op controls.
-- [ ] Keep the application responsive; move any future slow operations off the UI thread, but do not add background system polling for mockups.
+## 5. Milestone roadmap
 
-## Safety, privacy, and data handling
+### Milestone 0 — Foundation cleanup and stability
 
-- [ ] Document which existing tools access clipboard contents, invoke desktop portals, create `.desktop` files, or call `xdg-open`.
-- [ ] Keep each mockup's sample state in memory unless persistent storage is separately designed and explicitly disclosed.
-- [ ] Never present fictional values as live system data.
-- [ ] Avoid collecting, transmitting, or persisting personal data in mockups.
-- [ ] For any future real system integration, require an explicit design review, clear user initiation, error handling, and documentation of permissions and side effects before implementation.
+- [ ] Split the app into modules while preserving current behavior.
+- [ ] Add shared UI helpers to reduce repeated code.
+- [ ] Ensure all four real tools still work after refactoring.
+- [ ] Add targeted tests for the helper code and the Desktop Shortcut Maker logic.
+- [ ] Confirm formatting and tests pass on the refactored code.
 
-## Testing and release readiness
+### Milestone 1 — First mockup batch
 
-- [ ] Run `cargo fmt --check` and `cargo test --locked` for every change.
-- [ ] Add unit tests for non-UI behavior, including filtering, calculations, state transitions, and formatting.
-- [ ] Manually verify all four existing tools on a supported Linux desktop session after architectural changes.
-- [ ] Smoke-test new mockups without network access and verify that they operate only on sample/local in-memory data.
-- [ ] Update README.md when tool status, dependencies, requirements, build instructions, or mockup availability changes.
-- [ ] Keep requirements accurate: portal and clipboard dependencies should be described only for tools that use them.
-- [ ] Before packaging or distribution, resolve the project's license status; no license is currently declared in the repository.
+Implement the first four mockups as UI-only, local-state concepts.
 
-## Definition of done for a new mockup
+- [ ] Quick Notes
+- [ ] System Monitor
+- [ ] Audio Mixer
+- [ ] Focus Timer
 
-A mockup is ready to merge when all of the following are true:
+Delivery bar:
 
-1. Its launcher entry and panel use shared navigation and visual conventions.
-2. Its sample/demo nature is explicit wherever a user could mistake data for live system state.
-3. Its interactions are functional within the app and do not perform undisclosed external actions.
-4. It has a useful empty state, handles narrow window sizes, and provides feedback for user actions.
-5. Pure behavior has tests, and `cargo fmt --check` plus `cargo test --locked` pass.
-6. README.md accurately lists the tool as a mockup rather than a fully integrated system utility.
+- [ ] All four feel like a unified collection
+- [ ] Sample data is clearly identified as simulated
+- [ ] No external system calls are made
+- [ ] They are fully interactive within the app
+
+### Milestone 2 — Expand the suite
+
+Add second-wave mockups that broaden the utility set without expanding scope too much.
+
+- [ ] Unit Converter
+- [ ] Color Palette Studio
+- [ ] Downloads Organizer
+- [ ] Git Dashboard or Developer Overview (demo-only)
+- [ ] Log Viewer (demo-only)
+
+Delivery bar:
+
+- [ ] Each tool has a clear purpose and primary interaction
+- [ ] All mockup screens share the same navigation style
+- [ ] Each screen’s demo nature is noticeable without being obnoxious
+
+### Milestone 3 — Polish and release-readiness
+
+- [ ] Improve empty states and keyboard accessibility.
+- [ ] Review all interactions for clarity.
+- [ ] Standardize naming, labels, and helper text.
+- [ ] Verify the launcher search works with all new tools.
+- [ ] Review README and TODOs for correctness after each milestone.
+
+## 6. Tool-by-tool backlog
+
+### 6.1 Quick Notes
+
+Goals:
+
+- [ ] Create a compact, easy-to-scan note-taking tool.
+- [ ] Use a clear list/detail layout.
+- [ ] Keep the app local and fully in-memory.
+
+Implementation tasks:
+
+- [ ] Add a note list with title, tag, and preview text.
+- [ ] Support note selection and contextual detail panel.
+- [ ] Add search and tag filters.
+- [ ] Add pin/unpin behavior.
+- [ ] Add a small preview mode for Markdown-like formatting.
+- [ ] Add sample notes and a clear empty-state layout.
+- [ ] Keep edits ephemeral and clearly marked as demo-only.
+- [ ] Add pure helper tests for filtering and content preview logic.
+
+Acceptance criteria:
+
+- [ ] It feels like a lightweight notes app, not an editor.
+- [ ] Search and filter work reliably.
+- [ ] Notes are in-memory only.
+- [ ] The UI clearly states that it is a mockup.
+
+### 6.2 System Monitor
+
+Goals:
+
+- [ ] Show a glanceable dashboard with fictional values.
+- [ ] Feel like a small utility for checking system health at a glance.
+
+Implementation tasks:
+
+- [ ] Add metric cards for CPU, memory, storage, and network.
+- [ ] Add simulated charts with predictable values.
+- [ ] Add a process table or activity list with fake entries.
+- [ ] Add labels to indicate “simulated data only”.
+- [ ] Keep it visually compact and readable.
+- [ ] Add sorting or filtering for process entries.
+- [ ] Add a warning/healthy styling pattern for metrics.
+- [ ] Unit-test sorting and metric-normalization logic.
+
+Acceptance criteria:
+
+- [ ] No code reads real host metrics.
+- [ ] Values are clearly marked as intentionally fictional.
+- [ ] The layout remains readable at small sizes.
+
+### 6.3 Audio Mixer
+
+Goals:
+
+- [ ] Show a polished, compact mixer concept.
+- [ ] Offer per-app style controls.
+
+Implementation tasks:
+
+- [ ] Add master volume and per-app volume sections.
+- [ ] Add mute toggles for each app row.
+- [ ] Add mock device selection.
+- [ ] Add a visual output meter using static or pseudo-animated data.
+- [ ] Add a “Demo device” label and an explicit note that the tool does not connect to audio services.
+- [ ] Ensure slider changes are local-only and visible immediately.
+- [ ] Add tests for slider clamp logic and mute state transitions.
+
+Acceptance criteria:
+
+- [ ] UI is responsive and polished.
+- [ ] Logic is local and deterministic.
+- [ ] No actual system sound output or configuration is touched.
+
+### 6.4 Focus Timer
+
+Goals:
+
+- [ ] Provide a compact timer concept for work sessions.
+
+Implementation tasks:
+
+- [ ] Add focus, short-break, and long-break presets.
+- [ ] Implement a visible countdown.
+- [ ] Add start, pause, reset actions.
+- [ ] Add completed-session history with seeded sample data.
+- [ ] Add a small weekly streak chart or `today` summary.
+- [ ] Keep timer behavior based on local state and not on real background OS timing.
+- [ ] Add unit tests for countdown math, mode transitions, and session summary calculations.
+
+Acceptance criteria:
+
+- [ ] Timer logic is deterministic and testable.
+- [ ] It remains a visual prototype without OS notifications or persistent tracking.
+
+### 6.5 Unit Converter
+
+Goals:
+
+- [ ] Offer a quick, easy conversion workflow.
+
+Implementation tasks:
+
+- [ ] Add category tabs such as length, temperature, weight, volume.
+- [ ] Add paired inputs and a swap button.
+- [ ] Add recent conversion list.
+- [ ] Add support for common favorite conversions.
+- [ ] Write conversion helpers and test them separately from UI code.
+
+### 6.6 Color Palette Studio
+
+Goals:
+
+- [ ] Extend the app’s creative side without duplicating Color Picker.
+
+Implementation tasks:
+
+- [ ] Add palette cards and swatch previews.
+- [ ] Include contrast-check styling for text readability.
+- [ ] Add color harmony suggestions.
+- [ ] Add export/save-to-copy interactions for hex values.
+- [ ] Keep it clearly as a design mockup, not a real screen-world sampler.
+
+### 6.7 Downloads Organizer
+
+Goals:
+
+- [ ] Simulate file organization and sorting without reading the real filesystem.
+
+Implementation tasks:
+
+- [ ] Add file categories and mock metadata.
+- [ ] Add search and sorting controls.
+- [ ] Add a detail preview panel.
+- [ ] Keep all data seeded and synthetic.
+
+### 6.8 Git Dashboard / Developer Overview
+
+Goals:
+
+- [ ] Offer a lightweight summary screen for a dev-oriented mockup.
+
+Implementation tasks:
+
+- [ ] Add fake repo cards with statuses and commit times.
+- [ ] Add branch and PR badges using demo values.
+- [ ] Ensure no Git commands are executed.
+- [ ] Clearly label the screen as a sample overview.
+
+### 6.9 Log Viewer
+
+Goals:
+
+- [ ] Simulate a developer log viewer with style and filtering.
+
+Implementation tasks:
+
+- [ ] Add severity filters.
+- [ ] Add a search box and sample line detail panel.
+- [ ] Add severity color coding.
+- [ ] Keep the entries synthetic and bundled locally.
+
+## 7. Interaction and QA checklist
+
+For each new entry, verify the following before merging:
+
+- [ ] Search works across names, descriptions, and keywords.
+- [ ] Back navigation works with click and keyboard interactions.
+- [ ] Empty states are visible and not confusing.
+- [ ] Scroll areas do not break layout.
+- [ ] The app remains usable at both narrow and wide window sizes.
+- [ ] Buttons are identifiable as actions and not silent no-ops.
+- [ ] Sample-data labels are visible where needed.
+- [ ] There are no hidden system calls or file accesses.
+- [ ] The interface remains consistent with the rest of the app.
+
+## 8. Testing strategy
+
+### Unit tests
+
+- [ ] Add tests for helper logic:
+  - [ ] filtering and search ranking
+  - [ ] timer logic and countdown math
+  - [ ] unit conversion helpers
+  - [ ] note preview functions
+  - [ ] progress normalization and scaling
+- [ ] Keep tests deterministic and avoid real-time waits.
+
+### Manual verification
+
+- [ ] Run the app locally and verify each tool panel loads.
+- [ ] Test launcher search and selection.
+- [ ] Verify that mockups never imply real system data.
+- [ ] Verify the app still works with the four real tools after adding mockups.
+
+### CI checks
+
+- [ ] Run `cargo fmt --check`.
+- [ ] Run `cargo test --locked`.
+- [ ] Confirm no warnings or errors introduced by the refactor.
+
+## 9. Documentation updates
+
+- [ ] Update README.md when new mockups are added.
+- [ ] Update TODOs and roadmap when design or scope changes.
+- [ ] Document which screens are real and which screens are mockups.
+- [ ] Keep the language explicit: “interactive mockup”, “sample data”, “demo”, or “simulated”.
+
+## 10. Release-readiness definition
+
+A new mini-app or mockup is ready to merge when all of the following are true:
+
+1. It fits the launcher and the app’s styling system.
+2. It is clearly labeled as a mockup if it does not access real system data.
+3. It is fully interactive and understandable without external scaffolding.
+4. It has a clear purpose and a narrow scope.
+5. It passes testing and formatting checks.
+6. It has no hidden side effects or real-world system access.
+7. README.md and the roadmap remain accurate.
+
+## 11. Immediate next actions
+
+Before adding more mockups, the top-priority work is:
+
+- [ ] modularize the current app
+- [ ] centralize theme and API patterns
+- [ ] land the first mockup batch (Quick Notes, System Monitor, Audio Mixer, Focus Timer)
+- [ ] validate search and layout quality across all tools
+- [ ] ensure every mockup is explicitly demo-only
+
+This keeps the project moving without turning the app into a misleading simulation of real desktop functionality.
