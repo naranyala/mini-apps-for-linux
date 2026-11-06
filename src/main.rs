@@ -244,7 +244,11 @@ impl eframe::App for MiniAppsApp {
                     View::Tool { tool_index } => Some(*tool_index),
                 };
                 match tool_index {
-                    None => self.launcher(ui),
+                    None => {
+                        ScrollArea::vertical()
+                            .auto_shrink(false)
+                            .show(ui, |ui| self.launcher(ui));
+                    }
                     Some(i) => self.tool_panel(ui, i),
                 }
             });
@@ -300,11 +304,14 @@ impl MiniAppsApp {
             );
             ui.add_space(8.0);
         } else {
+            let columns = ((ui.available_width() + 18.0) / (CARD_SIZE.x + 18.0))
+                .floor()
+                .clamp(1.0, 4.0) as usize;
             egui::Grid::new("tool-grid")
-                .num_columns(4)
+                .num_columns(columns)
                 .spacing([18.0, 18.0])
                 .show(ui, |ui| {
-                    for chunk in matches.chunks(4) {
+                    for chunk in matches.chunks(columns) {
                         for &(index, _) in chunk {
                             if self.tool_card(ui, index) {
                                 self.open_tool(index);
@@ -797,6 +804,8 @@ type ClipStore = (Vec<ClipEntry>, u64);
 struct ClipboardApp {
     store: Option<Arc<Mutex<ClipStore>>>,
     watch: Option<Arc<AtomicBool>>,
+    watcher_status: Option<mpsc::Receiver<Result<(), String>>>,
+    watch_error: Option<String>,
     paused: bool,
     selected: Option<u64>,
     filter: String,
@@ -814,46 +823,44 @@ impl ClipboardApp {
 
         let store = Arc::new(Mutex::new((Vec::new(), 0u64)));
         let running = Arc::new(AtomicBool::new(true));
+        let (status_tx, status_rx) = mpsc::channel();
         self.store = Some(store.clone());
         self.watch = Some(running.clone());
+        self.watcher_status = Some(status_rx);
 
         let ctx_copy = ctx.clone();
         std::thread::spawn(move || {
             let mut clip = match arboard::Clipboard::new() {
                 Ok(clip) => clip,
-                Err(_) => {
+                Err(error) => {
+                    let _ = status_tx.send(Err(error.to_string()));
                     ctx_copy.request_repaint(); // surfaces an empty history view
                     return;
                 }
             };
-            let mut last: Option<String> = None;
-            let mut seeded = false;
+            let _ = status_tx.send(Ok(()));
+            let mut last = clip.get_text().ok();
             loop {
                 if running.load(Ordering::Relaxed) {
                     if let Ok(text) = clip.get_text() {
-                        let text_copy = text.clone();
-                        if !text.trim().is_empty()
-                            && last.as_deref() != Some(text.as_str())
-                        {
-                            last = Some(text);
-                            if seeded {
+                        if last.as_deref() != Some(text.as_str()) {
+                            last = Some(text.clone());
+                            if !text.trim().is_empty() {
                                 if let Ok(mut guard) = store.lock() {
                                     let (entries, next) = &mut *guard;
                                     // dedupe: drop an older identical entry, then insert on top
-                                    entries.retain(|e| e.content != text_copy);
+                                    entries.retain(|e| e.content != text);
                                     entries.insert(
                                         0,
                                         ClipEntry {
                                             id: *next,
-                                            content: text_copy,
+                                            content: text,
                                         },
                                     );
                                     *next += 1;
                                     entries.truncate(CLIP_HISTORY_MAX);
                                     ctx_copy.request_repaint();
                                 }
-                            } else {
-                                seeded = true; // do not record whatever was already on the clipboard at startup
                             }
                         }
                     }
@@ -869,6 +876,14 @@ impl ClipboardApp {
             watch.store(!self.paused, Ordering::Relaxed);
         }
     }
+
+    fn retry_watch(&mut self, ctx: &egui::Context) {
+        self.watch_started = false;
+        self.watcher_status = None;
+        self.watch_error = None;
+        self.status = None;
+        self.ensure_watch(ctx);
+    }
 }
 
 impl MiniAppsApp {
@@ -878,6 +893,17 @@ impl MiniAppsApp {
         self.clipboard.ensure_watch(&ctx);
 
         let clipboard = &mut self.clipboard;
+        let watcher_status = clipboard
+            .watcher_status
+            .as_ref()
+            .and_then(|rx| rx.try_recv().ok());
+        if let Some(result) = watcher_status {
+            clipboard.watcher_status = None;
+            if let Err(error) = result {
+                clipboard.watch_error = Some(error.clone());
+                clipboard.status = Some((true, format!("Clipboard unavailable: {error}")));
+            }
+        }
 
         ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
             header_impl(
@@ -888,7 +914,9 @@ impl MiniAppsApp {
 
             // ── Toolbar ──────────────────────────────────────────────────
             ui.horizontal(|ui| {
-                let (button_label, state_label, state_color) = if clipboard.paused {
+                let (button_label, state_label, state_color) = if clipboard.watch_error.is_some() {
+                    ("Retry", "Unavailable", RED)
+                } else if clipboard.paused {
                     ("Resume", "Paused", YELLOW)
                 } else {
                     ("Pause", "Monitoring", GREEN)
@@ -900,7 +928,11 @@ impl MiniAppsApp {
                     .sense(Sense::hover()),
                 );
                 if ui.button(button_label).clicked() {
-                    clipboard.pause_resume();
+                    if clipboard.watch_error.is_some() {
+                        clipboard.retry_watch(&ctx);
+                    } else {
+                        clipboard.pause_resume();
+                    }
                 }
                 ui.add(
                     Label::new(RichText::new(state_label).small().color(SUBTEXT))
@@ -1072,8 +1104,8 @@ fn summary_of(content: &str) -> (usize, usize) {
 /// Copy text into the system clipboard (best effort across X11/Wayland).
 fn copy_to_clipboard(text: &str) -> Result<(), String> {
     let mut clip = arboard::Clipboard::new().map_err(|e| format!("Clipboard unavailable: {e}"))?;
-    clip.set_text(text.to_owned()).ok();
-    Ok(())
+    clip.set_text(text.to_owned())
+        .map_err(|e| format!("Failed to write clipboard: {e}"))
 }
 
 // ══════════════════════════ Screenshot portal plumbing ════════════════════════
@@ -1350,6 +1382,7 @@ impl ColorPickerApp {
                             self.hover = None;
                             self.path = Some(path);
                             self.image = Some(color);
+                            self.texture = None;
                         }
                         Err(e) => {
                             self.status =
@@ -1899,7 +1932,7 @@ mod tests {
     fn previews_are_truncated() {
         assert_eq!(preview_of("hello", 96), "hello");
         assert_eq!(preview_of("", 96), "");
-        assert!(preview_of("aaaa".repeat(40), 10).ends_with('\u{2026}'));
+        assert!(preview_of(&"aaaa".repeat(40), 10).ends_with('\u{2026}'));
     }
 
     #[test]

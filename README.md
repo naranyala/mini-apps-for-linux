@@ -9,7 +9,9 @@ Mini Apps is a small Linux desktop utility launcher. It is currently a single Ru
 - **Screenshot Tool** — capture a region or the full screen through the desktop screenshot portal. View recent captures, copy a capture path, or open it with `xdg-open`.
 - **Color Picker** — capture a screen region through the desktop portal, select pixels from the captured image, and copy their color as an uppercase `#RRGGBB` value.
 
-The launcher has fuzzy search across tool names and keywords. The application opens with a dark theme.
+The launcher has fuzzy search across tool names and keywords, and its tool cards reflow to fit the window. The application opens with a dark theme.
+
+Clipboard history is held in memory for the current app session and is not saved to disk. The watcher reports initialization errors and offers a retry action; new non-empty text copied after monitoring starts is added to history. Clipboard write failures are shown in the tool's status message. Screenshot and color-sampling requests use the desktop portal, so the desktop may show its own selection or permission UI. Each new color sample refreshes the sampling canvas.
 
 ## Requirements
 
