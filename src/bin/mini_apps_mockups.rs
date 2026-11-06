@@ -6,13 +6,14 @@ const ACCENT: egui::Color32 = egui::Color32::from_rgb(0x89, 0xB4, 0xFA);
 const MUTED: egui::Color32 = egui::Color32::from_rgb(0xA6, 0xAD, 0xC8);
 const GREEN: egui::Color32 = egui::Color32::from_rgb(0xA6, 0xE3, 0xA1);
 const YELLOW: egui::Color32 = egui::Color32::from_rgb(0xF9, 0xE2, 0xAF);
+const RED: egui::Color32 = egui::Color32::from_rgb(0xF3, 0x8B, 0xA8);
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Mini Apps — Mockup Gallery")
-            .with_inner_size([980.0, 720.0])
-            .with_min_inner_size([680.0, 520.0]),
+            .with_inner_size([1040.0, 760.0])
+            .with_min_inner_size([760.0, 560.0]),
         ..Default::default()
     };
 
@@ -29,10 +30,23 @@ enum Mockup {
     Monitor,
     Mixer,
     Focus,
+    Converter,
+    Palette,
+    Downloads,
+    DevOverview,
 }
 
 impl Mockup {
-    const ALL: [Self; 4] = [Self::Notes, Self::Monitor, Self::Mixer, Self::Focus];
+    const ALL: [Self; 8] = [
+        Self::Notes,
+        Self::Monitor,
+        Self::Mixer,
+        Self::Focus,
+        Self::Converter,
+        Self::Palette,
+        Self::Downloads,
+        Self::DevOverview,
+    ];
 
     fn title(self) -> &'static str {
         match self {
@@ -40,15 +54,23 @@ impl Mockup {
             Self::Monitor => "System Monitor",
             Self::Mixer => "Audio Mixer",
             Self::Focus => "Focus Timer",
+            Self::Converter => "Unit Converter",
+            Self::Palette => "Color Palette Studio",
+            Self::Downloads => "Downloads Organizer",
+            Self::DevOverview => "Dev Overview",
         }
     }
 
     fn subtitle(self) -> &'static str {
         match self {
-            Self::Notes => "A calm space for quick thoughts and useful snippets.",
+            Self::Notes => "A calm place for quick thoughts and useful snippets.",
             Self::Monitor => "A glanceable overview of a fictional desktop session.",
             Self::Mixer => "A visual concept for per-app audio controls.",
-            Self::Focus => "A simple focus session with a little room to breathe.",
+            Self::Focus => "A compact session timer for focused work blocks.",
+            Self::Converter => "A lightweight conversion helper for everyday values.",
+            Self::Palette => "A curated palette board for color exploration and contrast.",
+            Self::Downloads => "A sample download manager with grouping and quick filters.",
+            Self::DevOverview => "A demo dashboard for project activity and task flow.",
         }
     }
 }
@@ -82,6 +104,142 @@ const NOTES: [Note; 4] = [
     },
 ];
 
+#[derive(Clone, Copy)]
+struct PaletteSample {
+    name: &'static str,
+    colors: [egui::Color32; 5],
+}
+
+const PALETTES: [PaletteSample; 4] = [
+    PaletteSample {
+        name: "Aurora",
+        colors: [
+            egui::Color32::from_rgb(0x2D, 0x5B, 0x7A),
+            egui::Color32::from_rgb(0x6A, 0xC9, 0xC9),
+            egui::Color32::from_rgb(0xF7, 0xD9, 0x6A),
+            egui::Color32::from_rgb(0xEF, 0x8A, 0x5E),
+            egui::Color32::from_rgb(0xF2, 0xF6, 0xF1),
+        ],
+    },
+    PaletteSample {
+        name: "Moss",
+        colors: [
+            egui::Color32::from_rgb(0x1B, 0x2A, 0x2F),
+            egui::Color32::from_rgb(0x3D, 0x6C, 0x52),
+            egui::Color32::from_rgb(0x92, 0xB4, 0x82),
+            egui::Color32::from_rgb(0xD5, 0xE8, 0xB5),
+            egui::Color32::from_rgb(0xF0, 0xF3, 0xE8),
+        ],
+    },
+    PaletteSample {
+        name: "Sunset",
+        colors: [
+            egui::Color32::from_rgb(0x2D, 0x1E, 0x2F),
+            egui::Color32::from_rgb(0xB9, 0x3B, 0x5A),
+            egui::Color32::from_rgb(0xF7, 0x7F, 0x50),
+            egui::Color32::from_rgb(0xF9, 0xC7, 0x5D),
+            egui::Color32::from_rgb(0xF8, 0xF3, 0xEC),
+        ],
+    },
+    PaletteSample {
+        name: "Night Shift",
+        colors: [
+            egui::Color32::from_rgb(0x12, 0x14, 0x1C),
+            egui::Color32::from_rgb(0x2E, 0x4A, 0x71),
+            egui::Color32::from_rgb(0x7C, 0x9F, 0xD8),
+            egui::Color32::from_rgb(0xB8, 0xCC, 0xFF),
+            egui::Color32::from_rgb(0xE6, 0xEE, 0xFF),
+        ],
+    },
+];
+
+#[derive(Clone, Copy)]
+struct DownloadEntry {
+    name: &'static str,
+    kind: &'static str,
+    size: &'static str,
+    status: &'static str,
+    progress: f32,
+}
+
+const DOWNLOADS: [DownloadEntry; 5] = [
+    DownloadEntry {
+        name: "linux-build.tar.gz",
+        kind: "Archive",
+        size: "842 MB",
+        status: "Ready to install",
+        progress: 1.0,
+    },
+    DownloadEntry {
+        name: "design-mockup.fig",
+        kind: "Project",
+        size: "18 MB",
+        status: "Syncing",
+        progress: 0.68,
+    },
+    DownloadEntry {
+        name: "screenshot-2026.png",
+        kind: "Image",
+        size: "3.1 MB",
+        status: "Complete",
+        progress: 1.0,
+    },
+    DownloadEntry {
+        name: "workshop-notes.pdf",
+        kind: "Document",
+        size: "440 KB",
+        status: "Queued",
+        progress: 0.14,
+    },
+    DownloadEntry {
+        name: "sample-audio.mp3",
+        kind: "Media",
+        size: "9.4 MB",
+        status: "Downloading",
+        progress: 0.41,
+    },
+];
+
+#[derive(Clone, Copy)]
+struct ProjectCard {
+    name: &'static str,
+    branch: &'static str,
+    status: &'static str,
+    note: &'static str,
+    commit: &'static str,
+}
+
+const PROJECTS: [ProjectCard; 4] = [
+    ProjectCard {
+        name: "mini-apps-linux",
+        branch: "feature/mockup-suite",
+        status: "In review",
+        note: "Launcher and sample panel design",
+        commit: "9f2a11a",
+    },
+    ProjectCard {
+        name: "desktop-shell-playground",
+        branch: "main",
+        status: "Healthy",
+        note: "Window mockups and desktop layout ideas",
+        commit: "d1204df",
+    },
+    ProjectCard {
+        name: "weekly-design-notes",
+        branch: "draft/ui",
+        status: "Draft",
+        note: "Color and typography system",
+        commit: "4b5cce1",
+    },
+    ProjectCard {
+        name: "tiny-tools",
+        branch: "chore/cleanup",
+        status: "Ready",
+        note: "Focus on small, lightweight interactions",
+        commit: "aa87ac2",
+    },
+];
+
 struct MockupGallery {
     selected: Mockup,
     search: String,
@@ -92,6 +250,11 @@ struct MockupGallery {
     muted: [bool; 3],
     focus_running: bool,
     focus_minutes: u32,
+    converter_amount: f64,
+    converter_category: usize,
+    selected_palette: usize,
+    selected_download: usize,
+    selected_project: usize,
 }
 
 impl Default for MockupGallery {
@@ -106,6 +269,11 @@ impl Default for MockupGallery {
             muted: [false; 3],
             focus_running: false,
             focus_minutes: 25,
+            converter_amount: 12.0,
+            converter_category: 0,
+            selected_palette: 0,
+            selected_download: 0,
+            selected_project: 0,
         }
     }
 }
@@ -133,6 +301,10 @@ impl eframe::App for MockupGallery {
                             Mockup::Monitor => Self::monitor_panel(ui),
                             Mockup::Mixer => self.mixer_panel(ui),
                             Mockup::Focus => self.focus_panel(ui),
+                            Mockup::Converter => self.converter_panel(ui),
+                            Mockup::Palette => self.palette_panel(ui),
+                            Mockup::Downloads => self.downloads_panel(ui),
+                            Mockup::DevOverview => self.dev_panel(ui),
                         }
                     });
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -422,6 +594,268 @@ impl MockupGallery {
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new("8 completed sessions · sample history").small().color(MUTED));
             });
+        });
+    }
+
+    fn converter_panel(&mut self, ui: &mut egui::Ui) {
+        let categories = ["Length", "Temperature", "Weight"];
+
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Category").strong());
+            egui::ComboBox::from_id_salt("converter-category")
+                .selected_text(categories[self.converter_category])
+                .show_ui(ui, |ui| {
+                    for (i, name) in categories.iter().enumerate() {
+                        let _ = ui.selectable_value(&mut self.converter_category, i, *name);
+                    }
+                });
+        });
+        ui.add_space(12.0);
+
+        let result = match self.converter_category {
+            0 => self.converter_amount * 2.54,
+            1 => (self.converter_amount * 9.0 / 5.0) + 32.0,
+            2 => self.converter_amount * 0.453592,
+            _ => self.converter_amount,
+        };
+
+        ui.columns(2, |columns| {
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(12))
+                .inner_margin(egui::Margin::same(14))
+                .show(&mut columns[0], |ui| {
+                    ui.label(egui::RichText::new("Input").small().strong().color(MUTED));
+                    ui.add_space(6.0);
+                    ui.add(egui::DragValue::new(&mut self.converter_amount).speed(0.1));
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new(match self.converter_category {
+                        0 => "inches",
+                        1 => "°C",
+                        2 => "lb",
+                        _ => "value",
+                    }).strong());
+                });
+
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(12))
+                .inner_margin(egui::Margin::same(14))
+                .show(&mut columns[1], |ui| {
+                    ui.label(egui::RichText::new("Result").small().strong().color(MUTED));
+                    ui.add_space(8.0);
+                    ui.label(egui::RichText::new(format!("{result:.2}")).size(32.0).strong());
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new(match self.converter_category {
+                        0 => "centimeters",
+                        1 => "°F",
+                        2 => "kg",
+                        _ => "converted unit",
+                    }).strong());
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new("12 in → 30.48 cm").small().color(MUTED));
+                });
+        });
+
+        ui.add_space(16.0);
+        egui::Frame::new()
+            .fill(BG.gamma_multiply(0.55))
+            .corner_radius(egui::CornerRadius::same(10))
+            .inner_margin(egui::Margin::same(12))
+            .show(ui, |ui| {
+                ui.label(egui::RichText::new("Recent conversions").small().strong().color(MUTED));
+                ui.add_space(8.0);
+                for row in ["5 in → 12.70 cm", "22 °C → 71.60 °F", "8 lb → 3.63 kg"] {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new(row).small());
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let _ = ui.button("Reuse");
+                        });
+                    });
+                    ui.separator();
+                }
+            });
+    }
+
+    fn palette_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            for (index, palette) in PALETTES.iter().enumerate() {
+                let selected = self.selected_palette == index;
+                let button = egui::Frame::new()
+                    .fill(if selected { ACCENT.gamma_multiply(0.14) } else { PANEL })
+                    .corner_radius(egui::CornerRadius::same(10))
+                    .inner_margin(egui::Margin::same(8));
+                button.show(ui, |ui| {
+                    if ui
+                        .selectable_label(selected, egui::RichText::new(palette.name).strong())
+                        .clicked()
+                    {
+                        self.selected_palette = index;
+                    }
+                });
+            }
+        });
+        ui.add_space(12.0);
+
+        let palette = PALETTES[self.selected_palette];
+        ui.columns(2, |columns| {
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::same(14))
+                .show(&mut columns[0], |ui| {
+                    ui.label(egui::RichText::new(palette.name).size(22.0).strong());
+                    ui.add_space(8.0);
+                    for color in palette.colors {
+                        let (rect, _) = ui.allocate_exact_size(egui::vec2(180.0, 34.0), egui::Sense::hover());
+                        ui.painter().rect_filled(rect, egui::CornerRadius::same(6), color);
+                    }
+                });
+
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::same(12))
+                .show(&mut columns[1], |ui| {
+                    ui.label(egui::RichText::new("Swatches").small().strong().color(MUTED));
+                    ui.add_space(8.0);
+                    for (idx, color) in palette.colors.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            let color_str = format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b());
+                            ui.painter().rect_filled(
+                                egui::Rect::from_min_size(ui.cursor().min, egui::vec2(44.0, 22.0)),
+                                egui::CornerRadius::same(5),
+                                *color,
+                            );
+                            ui.add_space(8.0);
+                            ui.label(egui::RichText::new(color_str).monospace().small());
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button("Copy").clicked() {
+                                    // demo-only, no real clipboard action
+                                }
+                            });
+                            ui.end_row();
+                        });
+                        ui.add_space(4.0);
+                        if idx < palette.colors.len() - 1 {
+                            ui.separator();
+                        }
+                    }
+                });
+        });
+    }
+
+    fn downloads_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut String::new())
+                    .hint_text("Search downloads…")
+                    .desired_width(220.0),
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let _ = ui.button("Filter");
+            });
+        });
+        ui.add_space(12.0);
+
+        ui.columns(2, |columns| {
+            egui::ScrollArea::vertical()
+                .max_height(360.0)
+                .show(&mut columns[0], |ui| {
+                    for (index, item) in DOWNLOADS.iter().enumerate() {
+                        let selected = self.selected_download == index;
+                        egui::Frame::new()
+                            .fill(if selected { ACCENT.gamma_multiply(0.12) } else { BG.gamma_multiply(0.55) })
+                            .corner_radius(egui::CornerRadius::same(10))
+                            .inner_margin(egui::Margin::same(10))
+                            .show(ui, |ui| {
+                                if ui.selectable_label(selected, item.name).clicked() {
+                                    self.selected_download = index;
+                                }
+                                ui.label(egui::RichText::new(item.kind).small().color(MUTED));
+                                ui.label(egui::RichText::new(format!("{} · {}", item.size, item.status)).small());
+                            });
+                        ui.add_space(6.0);
+                    }
+                });
+
+            let entry = DOWNLOADS[self.selected_download];
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::same(14))
+                .show(&mut columns[1], |ui| {
+                    ui.label(egui::RichText::new(entry.name).size(20.0).strong());
+                    ui.label(egui::RichText::new(format!("{} · {}", entry.kind, entry.size)).color(MUTED));
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new("Transfer status").small().strong().color(MUTED));
+                    ui.add(egui::ProgressBar::new(entry.progress).desired_width(f32::INFINITY));
+                    ui.add_space(8.0);
+                    ui.label(egui::RichText::new(entry.status).strong().color(if entry.progress >= 1.0 { GREEN } else { YELLOW }));
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new("Queued by: design-sessions\nSaved to: demo/downloads").small().color(MUTED));
+                });
+        });
+    }
+
+    fn dev_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            Self::metric_card(ui, "Open tasks", "14", 0.62, ACCENT);
+            Self::metric_card(ui, "Review queue", "6", 0.54, GREEN);
+            Self::metric_card(ui, "Build health", "92%", 0.92, YELLOW);
+        });
+        ui.add_space(14.0);
+        ui.columns(2, |columns| {
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::same(12))
+                .show(&mut columns[0], |ui| {
+                    ui.label(egui::RichText::new("Project cards").small().strong().color(MUTED));
+                    ui.add_space(8.0);
+                    for (index, project) in PROJECTS.iter().enumerate() {
+                        let selected = self.selected_project == index;
+                        egui::Frame::new()
+                            .fill(if selected { ACCENT.gamma_multiply(0.12) } else { PANEL })
+                            .corner_radius(egui::CornerRadius::same(8))
+                            .inner_margin(egui::Margin::same(10))
+                            .show(ui, |ui| {
+                                if ui.selectable_label(selected, project.name).clicked() {
+                                    self.selected_project = index;
+                                }
+                                ui.label(egui::RichText::new(project.branch).small().color(MUTED));
+                                ui.label(egui::RichText::new(project.note).small());
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new(project.status).small().strong().color(GREEN));
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        ui.label(egui::RichText::new(project.commit).small().color(MUTED));
+                                    });
+                                });
+                            });
+                        ui.add_space(6.0);
+                    }
+                });
+
+            let project = PROJECTS[self.selected_project];
+            egui::Frame::new()
+                .fill(BG.gamma_multiply(0.55))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::same(14))
+                .show(&mut columns[1], |ui| {
+                    ui.label(egui::RichText::new(project.name).size(22.0).strong());
+                    ui.label(egui::RichText::new(project.branch).small().color(MUTED));
+                    ui.add_space(10.0);
+                    ui.label(egui::RichText::new("Activity snapshot").small().strong().color(MUTED));
+                    for row in ["commit: add more mockup screens", "review: refine tool metadata", "build: keep the real tools stable"] {
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("•").color(ACCENT));
+                            ui.label(egui::RichText::new(row).small());
+                        });
+                    }
+                    ui.add_space(12.0);
+                    ui.label(egui::RichText::new("summary").small().strong().color(MUTED));
+                    ui.label(egui::RichText::new(project.note).small());
+                });
         });
     }
 }
